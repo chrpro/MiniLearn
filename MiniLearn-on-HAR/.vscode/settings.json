@@ -1,0 +1,23 @@
+{
+    "files.associations": {
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "ranges": "c",
+        "utility": "c",
+        "random": "c",
+        "string": "c",
+        "float-weights.h": "c",
+        "chrono": "c",
+        "limits": "c",
+        "type_traits": "c",
+        "*.tcc": "c",
+        "deque": "c",
+        "unordered_map": "c",
+        "unordered_set": "c",
+        "vector": "c",
+        "tuple": "cpp",
+        "condition_variable": "cpp"
+    },
+    "git.ignoreLimitWarning": true
+}
