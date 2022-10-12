@@ -1,3 +1,4 @@
 #!/bin/zsh
 make
-uwnet
+MiniLearn
+
