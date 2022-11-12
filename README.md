@@ -9,4 +9,13 @@ I have create a simplified version that can be compiled on local computer, if yo
 
 There are three examples for three datasets: CIFAR10, WISDM (HAR), and google keyspotting.
 
- 
+In order to complie you need to check the Makefile (I use relateve folder refence) so you should need to just execute make.
+
+The makefile create a local executable with the name Minilearn, to execute type ./MiniLearn 
+
+In CIFAR10 and HAR example the strucure looks like 
+
+├── src                     # Source files 
+├── obj                     # Obj files from other lib
+
+The keyspotting depends on different libraries and more steps is needed to make it work
