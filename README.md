@@ -15,7 +15,10 @@ The makefile create a local executable with the name Minilearn, to execute type 
 
 In CIFAR10 and HAR example the strucure looks like 
 
+```bash
 ├── src                     # Source files 
 ├── obj                     # Obj files from other lib
+
+```
 
 The keyspotting depends on different libraries and more steps is needed to make it work
