@@ -78,34 +78,6 @@ struct node
 
 typedef struct node N;
 
-void insert(int item, float itprio)
-{
-    // int item, itprio;
-    new = (N *)malloc(sizeof(N));
-
-    new->info = item;
-    new->priority = itprio;
-    new->next = NULL;
-    if (start == NULL)
-    {
-        start = new;
-    }
-    else if (start != NULL && itprio < start->priority)
-    {
-        new->next = start;
-        start = new;
-    }
-    else
-    {
-        q = start;
-        while (q->next != NULL && q->next->priority < itprio)
-        {
-            q = q->next;
-        }
-        new->next = q->next;
-        q->next = new;
-    }
-}
 
 int main(void)
 {
@@ -134,15 +106,11 @@ int main(void)
         printf("filter: %d , l1 norm : %f, l2 norm : %f , max norm : %f \n", j, l1norm, l2norm, maxNorm);
         insert(j, l2norm);
     }
-    // insert(j, ArithMean);
+    
 
     struct timeval t1;
     gettimeofday(&t1, NULL);
     srand(t1.tv_usec * t1.tv_sec);
-
-    // FILE* fp ;
-    // fp = fopen("test-accuracies-scale.csv", "w"); // save result in csv file
-    // fprintf(fp, "Epochs, Test Accuracy\n");
 
     uint32_t index = 0;
     int PoolOut = POOL2_OUT_DIM * POOL2_OUT_DIM * CONV2_OUT_CH;
@@ -156,7 +124,10 @@ int main(void)
     matrix q_X0 = make_matrix(NODE_0_TOTAL_TRAIN_IMAGES, PoolOut);
     matrix q_Y0 = make_matrix(NODE_0_TOTAL_TRAIN_IMAGES, CLASSES);
 
-    // float scale = 1 << CONV1_OUT_Q;
+    // get the results of the last layers (and dequantized int -> float)
+    //in practice you dequantize only during training 
+    
+    float scale = 1 << CONV2_OUT_Q;
 
     for (int img_row = 0; img_row < NODE_0_TOTAL_TRAIN_IMAGES; img_row++)
     {
@@ -164,7 +135,7 @@ int main(void)
 
         for (int i = 0; i < PoolOut; i++)
         {
-            q_X0.data[img_row * q_X0.cols + i] = (float)pool2_out[i] / powf(2, CONV2_OUT_Q);
+            q_X0.data[img_row * q_X0.cols + i] = (float)pool2_out[i] / scale;
         }
         q_Y0.data[(img_row * q_Y0.cols) + NODE_0_TRAIN_LABELS[img_row]] = 1;
     }
@@ -199,6 +170,7 @@ int main(void)
     active_learning.layers = calloc(7, sizeof(layer));
     active_learning.layers[0] = make_convolutional_layer(CONV3_IM_DIM, CONV3_IM_DIM, CONV3_IM_CH, numberOFilters, CONV3_KER_DIM, CONV3_STRIDE);
 
+    // calcualte the l2 norm of filters
     temp = start;
     for (int filter = 0; filter < numberOFilters; filter++)
     {
@@ -207,6 +179,7 @@ int main(void)
         temp = temp->next;
     }
 
+    // we pruned base on l2 nrom
     temp = start;
     for (int filter = 0; filter < numberOFilters; filter++)
     {
@@ -216,12 +189,10 @@ int main(void)
         for (int index = startIndex * filterSize; index < filterSize * (startIndex + 1); index++)
         {
             active_learning.layers[0].w.data[filter * filterSize + i] = (float)(conv3_w[index]) / powf(2, CONV3_WEIGHT_Q);
-            // printf(" i=%d ,", filter * filterSize + i);
             i++;
         }
-        // printf("\n----\n");
     }
-
+    //select the filters and dequantize
     temp = start;
     for (int index = 0; index < numberOFilters; index++)
     {
@@ -238,12 +209,14 @@ int main(void)
         free(temp);
     }
 
+    // define the network for learning
     active_learning.layers[1] = make_batchnorm_layer(numberOFilters);
     active_learning.layers[2] = make_activation_layer(RELU);
     int convout = numberOFilters * CONV3_OUT_DIM * CONV3_OUT_DIM;
     active_learning.layers[3] = make_connected_layer(convout, INTERFACE_OUT);
     active_learning.layers[3].freeze = 1;
 
+    // copy the values
     for (int index = 0; index < convout * INTERFACE_OUT; index++)
     {
         active_learning.layers[3].w.data[index] = (float)interface_w[index] / powf(2, INTERFACE_WEIGHT_Q);
@@ -259,7 +232,7 @@ int main(void)
     active_learning.layers[5].freeze = 1;
 
     for (int index = 0; index < LINEAR_WT_SHAPE; index++)
-    {
+    {    
         active_learning.layers[5].w.data[index] = (float)linear_w[index] / powf(2, LINEAR_WEIGHT_Q);
     }
 
@@ -295,7 +268,6 @@ int main(void)
     matrix q_X = make_matrix(NODE_0_TOTAL_TRAIN_IMAGES, PoolOut);
     matrix q_Y = make_matrix(NODE_0_TOTAL_TRAIN_IMAGES, CLASSES);
 
-    // float scale = 1 << CONV1_OUT_Q;
 
     for (int img_row = 0; img_row < NODE_0_TOTAL_TRAIN_IMAGES; img_row++)
     {
@@ -412,4 +384,34 @@ uint32_t network2(q7_t *input)
                              CONV3_OUT_DIM, conv_buffer, NULL);
 
     return 0;
+}
+
+
+void insert(int item, float itprio)
+{
+    // int item, itprio;
+    new = (N *)malloc(sizeof(N));
+
+    new->info = item;
+    new->priority = itprio;
+    new->next = NULL;
+    if (start == NULL)
+    {
+        start = new;
+    }
+    else if (start != NULL && itprio < start->priority)
+    {
+        new->next = start;
+        start = new;
+    }
+    else
+    {
+        q = start;
+        while (q->next != NULL && q->next->priority < itprio)
+        {
+            q = q->next;
+        }
+        new->next = q->next;
+        q->next = new;
+    }
 }
